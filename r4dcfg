@@ -84,6 +84,10 @@ if __name__ == "__main__":
                          action="store_true",
                          help = 'add a new serial console server')
 
+    group.add_argument ('--add-serialport',
+                         action="store_true",
+                         help = 'add a port to a serial console server')
+
     group.add_argument ('--list-serial',
                          action="store_true",
                          help = 'lists configured serial console servers')
@@ -91,6 +95,14 @@ if __name__ == "__main__":
     group.add_argument ('--add-board',
                         action = "store_true",
                         help = 'add a new board')
+
+    group.add_argument ('--add-slots',
+                        action = "store_true",
+                        help = 'add a number of slots to the rack')
+
+    group.add_argument ('--add-slot',
+                        action = "store_true",
+                        help = 'add a slot to the rack')
 
     group.add_argument ('--move-board',
                         action = "store_true",
@@ -153,15 +165,21 @@ if __name__ == "__main__":
             exit (-1)
         for s in r['list']:
             try:
-                console = serial.get_serial (s['name'])
                 powerstate = power.status(s['name'])
             except pysimplesoap.server.SoapFault as e:
                 # rack without serial and/or power server
-                console = { 'host': 'unknown', 'port': -1 }
                 powerstate = -1
-            print ('ID[%d]: %s\tName: %s\tRack: %s\tPort: %d\tserial: %s:%d' % (
+            try:
+                console = serial.get_serial (s['name'])
+            except pysimplesoap.server.SoapFault as e:
+                # rack without serial and/or power server
+                console = { 'host': 'unknown', 'portname': "unknown",  }
+
+            # remove utf-8 unicode tagging for human readability
+            s['uuid'] = s['uuid'].rstrip().decode('utf-8')
+            print ('ID[%d]: %s\tName: %s\tRack: %s\tPort: %d\tserial: %s:%s' % (
                        powerstate, s['uuid'], s['name'],
-                       s['rack'], s['port'], console['host'], console['port']))
+                       s['rack'], s['port'], console['host'], console['portname']))
         exit (0)
 
     if args.list_racks:
@@ -210,8 +228,11 @@ if __name__ == "__main__":
     if args.add_rack:
         parser.add_argument ("name", type = str, help = "rack name")
         parser.add_argument ("location", type = str, help = "rack location")
+        parser.add_argument ("slots", nargs='?', type = int, help = "rack slot number")
         eargs = parser.parse_args (extra)
-        rack.add_rack (eargs.name, eargs.location)
+        if not eargs.slots:
+            eargs.slots = 0
+        rack.add_rack (name=eargs.name, location=eargs.location, num_slots=eargs.slots)
         exit (0)
 
     if args.delete_board:
@@ -220,13 +241,29 @@ if __name__ == "__main__":
         board.delete_board (eargs.name)
         exit (0)
 
+    if args.add_slots:
+        parser.add_argument ("name", type = str, help = "rack name")
+        parser.add_argument ("slots", type = int, help = "number of slots")
+        eargs = parser.parse_args (extra)
+        rack.add_slots(rackname=eargs.name, num_slots=eargs.slots)
+        exit (0)
+
+    if args.add_slot:
+        parser.add_argument ("name", type = str, help = "rack name")
+        parser.add_argument ("slot", type = int, help = "rack slot number")
+#        parser.add_argument ("--console", nargs='+', type = str, help = "rack slot number")
+        eargs = parser.parse_args (extra)
+        rack.add_slot(rackname=eargs.name, slot=eargs.slot)
+        exit (0)
+
     parser.add_argument ("rack", type = str, help = "rack name")
 
     if args.add_board:
         parser.add_argument ("slot", type = int, help = "slot position in rack")
         parser.add_argument ("name", type = str, help = "board name")
+        parser.add_argument ("console", type = int, help = "serial console index for this board")
         eargs = parser.parse_args (extra)
-        board.add_board (eargs.name, eargs.rack, eargs.slot)
+        board.add_board (eargs.name, eargs.rack, eargs.slot, serialport=eargs.console)
         exit (0)
 
     if args.move_board:
@@ -234,6 +271,13 @@ if __name__ == "__main__":
         parser.add_argument ("name", type = str, help = "board name")
         eargs = parser.parse_args (extra)
         board.move_board (eargs.name, eargs.rack, eargs.slot)
+        exit (0)
+
+    if args.add_serialport:
+        parser.add_argument ("host", type = str, help = "hostname")
+        parser.add_argument ("portname", type = str, help = "port name")
+        eargs = parser.parse_args (extra)
+        serial.add_serialport (eargs.host, eargs.rack, eargs.portname)
         exit (0)
 
     parser.add_argument ("model", type = str, help = "model name")

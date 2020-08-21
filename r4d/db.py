@@ -85,18 +85,25 @@ class SerialPort (Base):
     serialcontrol_id = Column (Integer, ForeignKey ('serialcontrol.id'))
     port             = Column (Integer)
     udpport          = Column (Integer)
+    portname         = Column (String)
+    board            = relationship ("Board", uselist=False, back_populates="serialport")
+
+    def __repr__ (self):
+        desc = ("        ==SerialPort[%s]== id<%d> port<%d> udpport<%d>" % (self.portname, self.id, self.port, self.udpport))
+        return desc
 
     def num_ports (self):
         self.control.num_ports (self.udpport)
 
 class Slot (Base):
+    """Slots may be parents of 1 or more boards"""
     __tablename__ = 'slot'
 
     id = Column (Integer, primary_key = True, autoincrement=True)
 
     position  = Column (Integer)
     rack_id   = Column (Integer, ForeignKey('rack.id'))
-    board     = relationship ("Board", uselist=False, back_populates="slot")
+    board     = relationship ("Board", back_populates="slot")
 
     def __repr__ (self):
         return ("    ==SLOT[%d]== id<%d>" % (self.position, self.id))
@@ -131,6 +138,8 @@ class Board (Base):
     uuid    = Column (String (32), unique = True)
     slot_id = Column (Integer, ForeignKey ('slot.id'))
     slot    = relationship ("Slot", back_populates="board")
+    serialport_id = Column (Integer, ForeignKey ('serialport.id'))
+    serialport = relationship("SerialPort", back_populates="board")
 
     def __repr__ (self):
         return ("        Board[%s] id<%d>" % (self.name, self.id))
@@ -148,11 +157,16 @@ class R4DDataBase (object):
         session = self.__Session ()
         racks = session.query(Rack)
         for r in racks:
-            print (r)
+            desc = ("==Rack[%s]== id<%d>" % (r.name, r.id))
+            print (desc)
+            print (r.powercontrol)
+            print (r.serialcontrol)
+            for q in r.serialcontrol.ports:
+                print (q)
             for s in r.slots:
                 print (s)
-                if (s.board):
-                    print (s.board)
+                for b in s.board:
+                    print (b)
         session.close ()
 
     def get_session (self):

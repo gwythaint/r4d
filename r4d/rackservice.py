@@ -39,6 +39,43 @@ class RackService (object):
 
         self.__db = db
 
+    def add_slots (self, rackname, num_slots):
+        session = self.__db.get_session ()
+        try:
+            rack = session.query (Rack).filter_by (name=rackname).one ()
+            start = len(rack.slots)
+            for i in range(start, start + num_slots):
+                slot = Slot (position=i+1)
+                rack.slots.append (slot)
+            session.add (rack)
+            session.commit ()
+        except Exception as e:
+            log.error ("add slots failed: {}".format (e))
+            raise SoapFault (faultcode = "AddSlotsFailed",
+                             faultstring = "could not add a new slots",
+                             detail = e)
+        finally:
+            session.close ()
+
+    def add_slot (self, rackname, slot, console_list = ""):
+        session = self.__db.get_session ()
+        try:
+            rack = session.query (Rack).filter_by (name=rackname).one ()
+            start = len(rack.slots)
+            for i in range(0, len(console_list)):
+                print (str(i) + " " + str(i + start))
+            slot = Slot (position=start+1)
+            rack.slots.append(slot)
+            session.add (rack)
+            session.commit ()
+        except Exception as e:
+            log.error ("add slots failed: {}".format (e))
+            raise SoapFault (faultcode = "AddSlotsFailed",
+                             faultstring = "could not add a new slots",
+                             detail = e)
+        finally:
+            session.close ()
+
     def add_rack (self, name, location, desc="", num_slots=8):
         session = self.__db.get_session ()
         try:

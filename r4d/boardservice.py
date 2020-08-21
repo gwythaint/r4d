@@ -45,7 +45,7 @@ class BoardService (object):
                                                'uuid': str}]})
         self.__db = db
 
-    def add_board (self, name, rackname, slotnr):
+    def add_board (self, name, rackname, slotnr, serialport):
         session = self.__db.get_session ()
         try:
             uri = 'r4d://' + node () + '/' + name
@@ -53,7 +53,7 @@ class BoardService (object):
             rack = session.query (Rack).filter_by (name=rackname).one ()
             slot = session.query (Slot).filter_by (rack_id=rack.id, position=slotnr).one ()
             uuid = uuid5 (NAMESPACE_URL, str (uri))
-            board = Board (name=name, slot_id=slot.id, URI=uri, uuid = uuid.hex)
+            board = Board (name=name, slot_id=slot.id, URI=uri, uuid = uuid.hex, serialport_id=serialport)
             session.add (board)
             session.commit ()
 

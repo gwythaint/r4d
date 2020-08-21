@@ -50,6 +50,45 @@ class SerialService (object):
         models = list (self.__models)
         return models
 
+    def add_serialport (self, host, _rack, _portname):
+        """Add a serial port to a Serial Controller"""
+
+        session = self.__db.get_session ()
+        # session.begin (subtransactions=True)
+        # why is this removed
+        try:
+            port = session.query(SerialPort).filter_by(portname = _portname).scalar()
+        except IntegrityError as e:
+            log.error (" SQL error")
+            return -1
+        finally:
+            if port:
+                log.error (" This serial port is already assigned to this SerialControl")
+                return -1
+
+        serialcontrol = session.query(SerialControl).filter_by(URI = host).one()
+
+        serialportnumber = session.query(SerialPort.id).count()
+#        print (serialportnumber)
+
+        port = SerialPort (port = serialportnumber + 1,
+                           portname = _portname,
+                           udpport = 0,
+                           serialcontrol_id = serialcontrol.id)
+        session.add (port)
+
+        try:
+            session.commit ()
+        except IntegrityError as e:
+            print (e)
+            log.error (e)
+            session.rollback ()
+            session.close ()
+            return -1
+
+        session.close ()
+        return 0
+
     def add_serial (self, model, host, _rack):
         """Add Serialcontrol"""
         try:
@@ -79,7 +118,9 @@ class SerialService (object):
             return -1
 
         for i in range (1, serial.num_ports () + 1):
-            port = SerialPort (port = i, udpport = serial.get_udpport(i), serialcontrol_id = serial.id);
+            port = SerialPort (port = i,
+                               udpport = serial.get_udpport(i),
+                               serialcontrol_id = serial.id)
             session.add (port)
 
         try:
@@ -100,9 +141,14 @@ class SerialService (object):
         try:
             board = session.query (Board).filter_by (name = system).one ()
             serial = session.query (SerialControl).filter_by (rack_id = board.slot.rack_id).one ()
-            port = session.query (SerialPort).filter_by (serialcontrol_id = serial.id, port = board.slot.position).one ()
-            serport = {'host': serial.URI, 'port': port.udpport}
+#            print (serial)
+#            port = session.query (SerialPort).filter_by (serialcontrol_id = serial.id, port = board.serialport).one ()
+#            port = session.query (SerialPort).filter_by (serialport_id = board.serialport_id).all()
+            port = session.query (SerialPort).filter_by (port = board.serialport_id).one()
+#            print (port)
+            serport = {'host': serial.URI, 'udpport': port.udpport, 'portname': port.portname}
         except Exception as e:
+            log.error("unable to retrieve a SerialPort")
             raise SoapFault (faultcode = "SerialGetSerialFailed",
                              faultstring = "get serial of {} failed".format (system),
                              detail = e)
