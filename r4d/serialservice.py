@@ -69,8 +69,6 @@ class SerialService (object):
         serialcontrol = session.query(SerialControl).filter_by(URI = host).one()
 
         serialportnumber = session.query(SerialPort.id).count()
-#        print (serialportnumber)
-
         port = SerialPort (port = serialportnumber + 1,
                            portname = _portname,
                            udpport = 0,
@@ -118,9 +116,7 @@ class SerialService (object):
             return -1
 
         for i in range (1, serial.num_ports () + 1):
-            port = SerialPort (port = i,
-                               udpport = serial.get_udpport(i),
-                               serialcontrol_id = serial.id)
+            port = SerialPort (port = i, udpport = serial.get_udpport(i), serialcontrol_id = serial.id);
             session.add (port)
 
         try:
