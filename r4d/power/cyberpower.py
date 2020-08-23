@@ -51,8 +51,8 @@ class cyberpower (PowerControl):
 
     def powerstatus (self, port):
         m = Manager (self.URI, "public", 2)
-        if m.ePDUOutletStatusOutletState[port] == 2:
-            return 1
-        if m.ePDUOutletStatusOutletState[port] == 1:
+        if m.ePDUOutletStatusOutletState[port] == 'outletStatusOff':
             return 0
+        if m.ePDUOutletStatusOutletState[port] == 'outletStatusOn':
+            return 1
         return -1;
